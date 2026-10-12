@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { DonationItem, DonationCategory, DonationStatus } from '../types';
 import { useRescue } from '../context/RescueContext';
 import { getCategoryMeta } from '../utils/categoryIcons';
+import { SafeImage } from './SafeImage';
 import { 
   Search, 
   MapPin, 
@@ -14,7 +15,8 @@ import {
   ShieldCheck,
   CheckCircle2,
   AlertCircle,
-  Layers
+  Layers,
+  Share2
 } from 'lucide-react';
 
 interface BrowseDonationsProps {
@@ -28,7 +30,18 @@ export const BrowseDonations: React.FC<BrowseDonationsProps> = ({
   onRequestPickup,
   openCreateModal
 }) => {
-  const { donations } = useRescue();
+  const { donations, showToast } = useRescue();
+
+  const handleQuickShare = (e: React.MouseEvent, item: DonationItem) => {
+    e.stopPropagation();
+    try {
+      const url = `${window.location.origin}/?donation=${item.id}`;
+      navigator.clipboard.writeText(url);
+      showToast(`Link for "${item.title}" copied! Ready to send to someone.`, 'success');
+    } catch {
+      showToast('Could not copy link automatically.', 'info');
+    }
+  };
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');

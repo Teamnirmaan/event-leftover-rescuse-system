@@ -15,16 +15,53 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { CreateDonationModal } from './components/CreateDonationModal';
 import { DonationDetailModal } from './components/DonationDetailModal';
 import { RequestPickupModal } from './components/RequestPickupModal';
+import { useRescue } from './context/RescueContext';
 import { DonationItem } from './types';
 
 const MainApp: React.FC = () => {
+  const { donations } = useRescue();
   const [activeTab, setActiveTab] = useState<string>('home');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedDonation, setSelectedDonation] = useState<DonationItem | null>(null);
   const [pickupTargetDonation, setPickupTargetDonation] = useState<DonationItem | null>(null);
 
+  // Detect shared donation link parameter on mount or when donations load
+  React.useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const donationId = params.get('donation') || (window.location.hash.includes('donation=') ? window.location.hash.split('donation=')[1] : null);
+      if (donationId && donations.length > 0) {
+        const match = donations.find((d) => d.id.toLowerCase() === donationId.toLowerCase());
+        if (match) {
+          setSelectedDonation(match);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [donations]);
+
   const handleSelectDonation = (donation: DonationItem) => {
     setSelectedDonation(donation);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('donation', donation.id);
+      window.history.replaceState({}, '', url.toString());
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleCloseDetailModal = () => {
+    setSelectedDonation(null);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('donation');
+      const cleanPath = url.pathname + (url.search ? url.search : '');
+      window.history.replaceState({}, '', cleanPath);
+    } catch {
+      // ignore
+    }
   };
 
   const handleRequestPickup = (donation: DonationItem) => {
@@ -129,7 +166,7 @@ const MainApp: React.FC = () => {
 
       <DonationDetailModal
         donation={selectedDonation}
-        onClose={() => setSelectedDonation(null)}
+        onClose={handleCloseDetailModal}
         onRequestPickupClick={handleRequestPickup}
       />
 

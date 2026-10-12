@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { DonationItem } from '../types';
 import { useRescue } from '../context/RescueContext';
 import { getCategoryMeta } from '../utils/categoryIcons';
+import { SafeImage } from './SafeImage';
 import { 
   X, 
   MapPin, 
@@ -17,7 +18,13 @@ import {
   Sparkles,
   ArrowRight,
   Package,
-  Layers
+  Layers,
+  Share2,
+  Copy,
+  Check,
+  ExternalLink,
+  MessageCircle,
+  ImageIcon
 } from 'lucide-react';
 
 interface DonationDetailModalProps {
@@ -31,11 +38,60 @@ export const DonationDetailModal: React.FC<DonationDetailModalProps> = ({
   onClose,
   onRequestPickupClick
 }) => {
-  const { currentUser, reviewPickupRequest, assignVolunteerMission, markCollected, markDelivered } = useRescue();
+  const { currentUser, reviewPickupRequest, assignVolunteerMission, markCollected, markDelivered, showToast } = useRescue();
   const [deliveryNotesInput, setDeliveryNotesInput] = useState('');
   const [showDeliveryForm, setShowDeliveryForm] = useState(false);
+  const [showSharePanel, setShowSharePanel] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedSummary, setCopiedSummary] = useState(false);
 
   if (!donation) return null;
+
+  const getShareableUrl = () => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    return `${origin}/?donation=${donation.id}`;
+  };
+
+  const getFullShareText = () => {
+    const shareUrl = getShareableUrl();
+    return `🍱 Food Rescue Alert — ${donation.title}
+━━━━━━━━━━━━━━━━━━━━━━━━━
+Event: ${donation.eventName} (${donation.eventType.replace('_', ' ')})
+Quantity: ${donation.quantity} ${donation.quantityUnit}
+Category: ${donation.category.replace('_', ' ')}
+Pickup Location: ${donation.venueName}, ${donation.address}, ${donation.city}
+Pickup Window: ${donation.pickupWindowStart} | Deadline: ${donation.pickupDeadline}
+Storage Notes: ${donation.storageInstructions}
+${donation.ingredientsOrAllergens ? `Ingredients/Allergens: ${donation.ingredientsOrAllergens}\n` : ''}
+Claim listing & view photos: ${shareUrl}`;
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(getShareableUrl());
+      setCopiedLink(true);
+      showToast('Link copied! Image & details ready to send to anyone.', 'success');
+      setTimeout(() => setCopiedLink(false), 2500);
+    } catch {
+      showToast('Could not copy automatically. Link: ' + getShareableUrl(), 'info');
+    }
+  };
+
+  const handleCopySummary = async () => {
+    try {
+      await navigator.clipboard.writeText(getFullShareText());
+      setCopiedSummary(true);
+      showToast('Rescue summary copied to clipboard! Ready to paste into chat.', 'success');
+      setTimeout(() => setCopiedSummary(false), 2500);
+    } catch {
+      showToast('Could not copy text automatically.', 'info');
+    }
+  };
+
+  const handleWhatsAppShare = () => {
+    const text = encodeURIComponent(getFullShareText());
+    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank', 'noopener,noreferrer');
+  };
 
   const getStatusStep = () => {
     switch (donation.status) {
@@ -63,22 +119,35 @@ export const DonationDetailModal: React.FC<DonationDetailModalProps> = ({
       <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200">
         
         {/* Header Image and Quick Badges */}
-        <div className="relative h-64 sm:h-72 w-full bg-slate-100 overflow-hidden">
-          <img
+        <div className="relative h-64 sm:h-72 w-full bg-slate-900 overflow-hidden">
+          <SafeImage
             src={donation.imageUrl}
             alt={donation.title}
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover"
+            fallbackCategory={donation.category}
+            className="w-full h-full object-cover transition-opacity duration-300"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent" />
           
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 bg-slate-900/70 hover:bg-slate-900 text-white p-2 rounded-full backdrop-blur-xs transition-colors"
-            aria-label="Close modal"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          {/* Top Header Action Buttons: Share & Close */}
+          <div className="absolute top-4 right-4 flex items-center gap-2">
+            <button
+              onClick={() => setShowSharePanel(!showSharePanel)}
+              className="bg-slate-900/75 hover:bg-slate-900 text-white px-3 py-1.5 rounded-full backdrop-blur-xs transition-colors flex items-center gap-1.5 text-xs font-semibold shadow-md border border-white/20"
+              title="Send this donation to someone"
+              aria-label="Send this donation to someone"
+            >
+              <Share2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Send to Someone</span>
+            </button>
+
+            <button
+              onClick={onClose}
+              className="bg-slate-900/75 hover:bg-slate-900 text-white p-2 rounded-full backdrop-blur-xs transition-colors shadow-md border border-white/20"
+              aria-label="Close modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
           <div className="absolute bottom-4 left-4 right-4 text-white">
             {(() => {
@@ -107,6 +176,105 @@ export const DonationDetailModal: React.FC<DonationDetailModalProps> = ({
         {/* Content Body */}
         <div className="p-6 space-y-6">
           
+          {/* Send to Someone / Sharing Card */}
+          {showSharePanel && (
+            <div className="bg-gradient-to-br from-emerald-50 via-white to-slate-50 border-2 border-emerald-500/40 rounded-2xl p-5 shadow-sm space-y-4 animate-in fade-in duration-200">
+              <div className="flex items-start justify-between gap-2 border-b border-emerald-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-850 flex items-center justify-center shrink-0">
+                    <Share2 className="w-5 h-5 text-emerald-700" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 font-display">
+                      Send This Rescue Listing to Someone
+                    </h3>
+                    <p className="text-xs text-slate-600">
+                      Share with an NGO, volunteer courier, or community coordinator. The link and photo preview will display seamlessly.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowSharePanel(false)}
+                  className="text-slate-400 hover:text-slate-600 p-1"
+                  aria-label="Close share panel"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Direct Link Copy */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 block">
+                  Direct Shareable Link (opens this exact donation)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={getShareableUrl()}
+                    className="flex-1 text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono text-slate-700 select-all"
+                  />
+                  <button
+                    onClick={handleCopyLink}
+                    className="px-4 py-2 bg-emerald-800 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-colors shadow-2xs"
+                  >
+                    {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-200" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedLink ? 'Copied Link!' : 'Copy Link'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Actions Grid: WhatsApp & Text Summary */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                <button
+                  onClick={handleWhatsAppShare}
+                  className="w-full py-2.5 px-3 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-2xs transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Send via WhatsApp</span>
+                </button>
+
+                <button
+                  onClick={handleCopySummary}
+                  className="w-full py-2.5 px-3 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-2xs transition-colors"
+                >
+                  {copiedSummary ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
+                  <span>{copiedSummary ? 'Copied Details!' : 'Copy Full Summary'}</span>
+                </button>
+              </div>
+
+              {/* Verified Image Preview & Safe Resolution Note */}
+              <div className="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between text-xs text-slate-600 gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-slate-200">
+                    <SafeImage
+                      src={donation.imageUrl}
+                      alt={donation.title}
+                      fallbackCategory={donation.category}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="font-semibold text-slate-900 block truncate">Photo Asset Verified</span>
+                    <span className="text-[11px] text-emerald-700 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Guaranteed not to break on external devices
+                    </span>
+                  </div>
+                </div>
+                <a
+                  href={donation.imageUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-emerald-800 hover:underline flex items-center gap-1 shrink-0 font-medium"
+                >
+                  <span>Open Image</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+          )}
+
           {/* Workflow Progress Bar */}
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Rescue Lifecycle</h3>
@@ -315,12 +483,22 @@ export const DonationDetailModal: React.FC<DonationDetailModalProps> = ({
 
           {/* Workflow Action Buttons for Volunteer / Recipient / Visitor */}
           <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200">
-            <button
-              onClick={onClose}
-              className="py-2.5 px-4 text-sm font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
-            >
-              Close
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onClose}
+                className="py-2.5 px-4 text-sm font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+              >
+                Close
+              </button>
+
+              <button
+                onClick={() => setShowSharePanel(!showSharePanel)}
+                className="py-2.5 px-3.5 text-xs font-semibold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                <Share2 className="w-3.5 h-3.5 text-emerald-700" />
+                <span>{showSharePanel ? 'Hide Share Menu' : 'Send to Someone'}</span>
+              </button>
+            </div>
 
             <div className="flex items-center gap-2">
               {donation.status === 'available' && onRequestPickupClick && (

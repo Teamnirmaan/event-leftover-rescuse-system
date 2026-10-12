@@ -1,9 +1,13 @@
 import { DonationItem, UserProfile, ProjectRisk } from '../types';
+import banquetImg from '../assets/images/banquet_leftovers_1791790095389.jpg';
+import volunteerImg from '../assets/images/volunteer_delivery_1791790113261.jpg';
+import reusableImg from '../assets/images/reusable_materials_1791790124637.jpg';
+import heroImg from '../assets/images/hero_food_rescue_1791790078792.jpg';
 
-export const BANQUET_IMAGE = '/src/assets/images/banquet_leftovers_1791790095389.jpg';
-export const VOLUNTEER_IMAGE = '/src/assets/images/volunteer_delivery_1791790113261.jpg';
-export const REUSABLE_IMAGE = '/src/assets/images/reusable_materials_1791790124637.jpg';
-export const HERO_IMAGE = '/src/assets/images/hero_food_rescue_1791790078792.jpg';
+export const BANQUET_IMAGE = banquetImg;
+export const VOLUNTEER_IMAGE = volunteerImg;
+export const REUSABLE_IMAGE = reusableImg;
+export const HERO_IMAGE = heroImg;
 
 export const DEMO_USERS: Record<string, UserProfile> = {
   guest: {

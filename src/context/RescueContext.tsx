@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { DonationItem, UserProfile, UserRole, ActivityNotification, NGORequest } from '../types';
 import { INITIAL_DONATIONS, DEMO_USERS, HERO_IMAGE, BANQUET_IMAGE, VOLUNTEER_IMAGE, REUSABLE_IMAGE } from '../data/initialData';
+import { resolveImageSource, getCategoryFallback } from '../components/SafeImage';
 
 interface RescueContextType {
   donations: DonationItem[];
@@ -37,12 +38,21 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((item: DonationItem) => ({
+            ...item,
+            imageUrl: resolveImageSource(item.imageUrl, item.category),
+          }));
+        }
       }
     } catch {
       // ignore
     }
-    return INITIAL_DONATIONS;
+    return INITIAL_DONATIONS.map((item) => ({
+      ...item,
+      imageUrl: resolveImageSource(item.imageUrl, item.category),
+    }));
   });
 
   const [currentRole, setCurrentRoleState] = useState<UserRole>(() => {
@@ -145,6 +155,7 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const newDonation: DonationItem = {
       ...data,
+      imageUrl: resolveImageSource(data.imageUrl, data.category),
       id,
       status: 'available',
       createdAt: new Date().toISOString(),
