@@ -1,0 +1,8 @@
+{
+  "name": "Remix EventRescue",
+  "description": "Turning Event Leftovers into Hope — surplus food and resource rescue management platform for event organizers, NGOs, and volunteers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
